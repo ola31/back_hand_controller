@@ -13,6 +13,9 @@
 #define ADDR_PRO_TORQUE_ENABLE          64
 #define ADDR_PRO_PRESENT_POSITION       132
 
+#define ADDR_OPERATING_MODE             11
+#define CURRENT_LIMIT                   38
+
 #define TORQUE_ENABLE                   1
 #define TORQUE_DISABLE                  0
 
@@ -45,29 +48,43 @@ int Left_Triger = 6; //button
 
 
 bool posi_go = false;
+bool gripper_posi_go = false;
 
 int dxl20_initial_pose;
 int present_position;
 
-int Delta = 50;
+int Delta = 60;
 int goal_position;
+int gripper_goal_position;
+
+int gripper_posi[2]={1890,745};
+
+#define OPEN 1
+#define CLOSE 0
 
 int tele_onoff_g = 0;
 
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
 {
-  if(joymsg->axes[AXES_LEFT_UPDOWN]>0.1){
-    goal_position = present_position + Delta;
-    present_position = goal_position;
-    posi_go = true;
-
-  }
-  else if(joymsg->axes[AXES_LEFT_UPDOWN]<0.1){
+  if(joymsg->axes[AXES_LEFT_UPDOWN]>0.2){
     goal_position = present_position - Delta;
     present_position = goal_position;
     posi_go = true;
 
+  }
+  else if(joymsg->axes[AXES_LEFT_UPDOWN]<-0.2){
+    goal_position = present_position + Delta;
+    present_position = goal_position;
+    posi_go = true;
+  }
+  if(joymsg->buttons[Right_triger]>=0.9){
+    gripper_goal_position = gripper_posi[CLOSE];
+    gripper_posi_go = true;
+  }
+  else if(joymsg->buttons[Left_Triger]>=0.9){
+    gripper_goal_position = gripper_posi[OPEN];
+    gripper_posi_go = true;
   }
 
 }
@@ -107,6 +124,33 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  //Set DXL 11 operating mode
+  dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, DXL_ID+1, ADDR_OPERATING_MODE, 5, &dxl_error);
+  if (dxl_comm_result != COMM_SUCCESS) {
+    packetHandler->getTxRxResult(dxl_comm_result);
+  }
+  else if (dxl_error != 0){
+    packetHandler->getRxPacketError(dxl_error);
+  }
+  else{
+    ROS_INFO("Dynamixel 11 operating mode : current_based_position_mode");
+  }
+
+  //Set dxl 11 current limit
+  dxl_comm_result = packetHandler->write2ByteTxRx(portHandler, DXL_ID+1, CURRENT_LIMIT, 500, &dxl_error); //500 * 2.69 [mA]
+  if (dxl_comm_result != COMM_SUCCESS) {
+    packetHandler->getTxRxResult(dxl_comm_result);
+  }
+  else if (dxl_error != 0){
+    packetHandler->getRxPacketError(dxl_error);
+  }
+  else{
+    ROS_INFO("Dynamixel 11 operating mode : current_based_position_mode");
+  }
+
+
+
+
   // Enable Dynamixel Torque
    dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, DXL_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
    if (dxl_comm_result != COMM_SUCCESS) {
@@ -118,6 +162,18 @@ int main(int argc, char **argv)
    else{
      ROS_INFO("Dynamixel has been successfully connected");
    }
+
+   dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, DXL_ID+1, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+   if (dxl_comm_result != COMM_SUCCESS) {
+     packetHandler->getTxRxResult(dxl_comm_result);
+   }
+   else if (dxl_error != 0){
+     packetHandler->getRxPacketError(dxl_error);
+   }
+   else{
+     ROS_INFO("Dynamixel has been successfully connected");
+   }
+
 
    dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl_present_position, &dxl_error);
    if (dxl_comm_result != COMM_SUCCESS)
@@ -139,7 +195,7 @@ int main(int argc, char **argv)
 
 
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(50);
   while (ros::ok())
   {
     std_msgs::String msg;
@@ -148,19 +204,27 @@ int main(int argc, char **argv)
     chatter_pub.publish(msg);
 
     if((tele_onoff_g==3) && posi_go){
-       dxl_comm_result = packetHandler->write4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_GOAL_POSITION, (int)goal_position, &dxl_error);
+       dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID, ADDR_PRO_GOAL_POSITION, (int)goal_position);
        if (dxl_comm_result != COMM_SUCCESS)
        {
          packetHandler->getTxRxResult(dxl_comm_result);
        }
-       else if (dxl_error != 0)
-       {
-         packetHandler->getRxPacketError(dxl_error);
-       }
        posi_go = false;
+    }
+    if((tele_onoff_g==3) && gripper_posi_go){
+
+      dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID+1, ADDR_PRO_GOAL_POSITION, (int)gripper_goal_position);
+      if (dxl_comm_result != COMM_SUCCESS)
+      {
+        packetHandler->getTxRxResult(dxl_comm_result);
+      }
+      gripper_posi_go = false;
+
     }
 
 
+    //dxl_comm_result = packetHandler->read4ByteTxRx(portHandler, DXL_ID, ADDR_PRO_PRESENT_POSITION, (uint32_t*)&dxl_present_position, &dxl_error);
+   // present_position = dxl_present_position;
     ros::spinOnce();
 
     loop_rate.sleep();
