@@ -302,8 +302,6 @@ int main(int argc, char **argv)
    start = present_posi;
 
 
-
-  ros::Publisher chatter_pub = nh.advertise<std_msgs::String>("chatter", 1000);
   ros::Subscriber sub = nh.subscribe("/joy", 1, JoyCallback);
   ros::Subscriber tele_onoff_sub = nh.subscribe("/teleop_onoff", 10, teleOnoffCallback);
   ros::Subscriber sub_lidar = nh.subscribe("/lidar_updown", 1000, updownCallback);
@@ -315,10 +313,6 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(50);
   while (ros::ok())
   {
-    std_msgs::String msg;
-    msg.data = "hello world";
-
-    chatter_pub.publish(msg);
 
     if((tele_onoff_g==3) && posi_go){
        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID, ADDR_PRO_GOAL_POSITION, (int)goal_position);
