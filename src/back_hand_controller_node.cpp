@@ -133,7 +133,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
   }
 
   if(joymsg->buttons[Right_triger_button]>=0.9){
-    ROS_INFO("Right triger button : lidar updown");
+    ROS_INFO("Right triger button : lidar Down");
     if(operating_mode == TORQUE_OFF){
       goal_updown = 1;
       start = present_posi;
@@ -142,8 +142,8 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
     }
   }
   else if(joymsg->buttons[Left_triger_button]>=0.9){
+    ROS_INFO("Left triger button : lidar Up");
     if(operating_mode == TORQUE_OFF){
-      ROS_INFO("Left triger button : lidar updown");
       goal_updown = 0;
       start = present_posi;
       //is_moving = true;
