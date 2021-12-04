@@ -133,9 +133,8 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
   }
 
   if(joymsg->buttons[Right_triger_button]>=0.9){
-    ROS_INFO("aa");
+    ROS_INFO("Right triger button : lidar updown");
     if(operating_mode == TORQUE_OFF){
-      ROS_INFO("bb");
       goal_updown = 1;
       start = present_posi;
       //is_moving = true;
@@ -144,24 +143,22 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
   }
   else if(joymsg->buttons[Left_triger_button]>=0.9){
     if(operating_mode == TORQUE_OFF){
+      ROS_INFO("Left triger button : lidar updown");
       goal_updown = 0;
       start = present_posi;
       //is_moving = true;
       t = 0.0;
     }
   }
-   ROS_INFO("aaa");
 }
 void teleOnoffCallback(const std_msgs::Int8::ConstPtr& msg)
 {
   tele_onoff_g = msg->data;
+  if(tele_onoff_g == 4){
+    operating_mode = TORQUE_OFF;
+  }
 
 }
-
-void mode_Callback(const std_msgs::Int8::ConstPtr& msg){
-  operating_mode = msg->data;
-}
-
 
 int main(int argc, char **argv)
 {
@@ -305,8 +302,6 @@ int main(int argc, char **argv)
   ros::Subscriber sub = nh.subscribe("/joy", 1, JoyCallback);
   ros::Subscriber tele_onoff_sub = nh.subscribe("/teleop_onoff", 10, teleOnoffCallback);
   ros::Subscriber sub_lidar = nh.subscribe("/lidar_updown", 1000, updownCallback);
-  ros::Subscriber mode_sub = nh.subscribe("/mode", 1000, mode_Callback);  //operating
-
 
 
 
