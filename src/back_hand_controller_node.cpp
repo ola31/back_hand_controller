@@ -9,7 +9,7 @@
 #define DXL_ID                          20
 #define LIDAR_DXL_ID                    1
 #define BAUDRATE                        1000000
-#define DEVICENAME                      "/dev/ttyUSB0"
+#define DEVICENAME                      "dev/ttykudos_u2d2_B"     // "/dev/ttyUSB0"
 
 #define ADDR_PRO_GOAL_POSITION          116
 #define ADDR_PRO_TORQUE_ENABLE          64
