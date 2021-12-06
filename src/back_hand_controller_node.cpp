@@ -111,6 +111,9 @@ void updownCallback(const std_msgs::Int8::ConstPtr& msg)
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
 {
+  if(tele_onoff_g==3){
+
+
   if(joymsg->axes[AXES_LEFT_UPDOWN]>0.2){
     goal_position = present_position - Delta;
     present_position = goal_position;
@@ -130,6 +133,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
   else if(joymsg->buttons[Left_Triger]>=0.9){
     gripper_goal_position = gripper_posi[OPEN];
     gripper_posi_go = true;
+  }
   }
 
   if(joymsg->buttons[Right_triger_button]>=0.9){
@@ -330,6 +334,7 @@ int main(int argc, char **argv)
 
     std_msgs::Int32 msg_;
 
+    if(operating_mode == TORQUE_OFF){
     if(t < acc_time_area){
       if(goal_updown == 1){
         goal_posi = DOWN_POSI;
@@ -352,6 +357,7 @@ int main(int argc, char **argv)
      {
        packetHandler->getTxRxResult(dxl_comm_result);
      }
+    }
 
 
 
