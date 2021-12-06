@@ -82,6 +82,7 @@ int tele_onoff_g = 0;
 #define EPSILON 0.001
 
 #define TORQUE_OFF 0  //operating mode
+#define Non_TORQUE_OFF -1
 int operating_mode = -1;
 
 int goal_updown = 1; //default : 1  : lidar down
@@ -161,6 +162,7 @@ void teleOnoffCallback(const std_msgs::Int8::ConstPtr& msg)
   if(tele_onoff_g == 4){
     operating_mode = TORQUE_OFF;
   }
+  else operating_mode = Non_TORQUE_OFF;
 
 }
 
