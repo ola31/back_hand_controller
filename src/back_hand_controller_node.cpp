@@ -47,8 +47,10 @@
 
 
 /********조이스틱 Axes & Butten*******/
-/*#define*/ int AXES_LEFT_UPDOWN = 1;
+/*#define*/
+  int AXES_LEFT_UPDOWN = 1;
 //#define AXES_LEFT_RL -1
+  int AXES_RIGHT_LEFT_RIGHT = 3;
 
 //#define AXES_RIGHT_UPDOWN -1
 /*#define*/ int AXES_RIGHT_RL = 3;
@@ -107,6 +109,7 @@ int goal_posi = 0;
 int start=0;
 
 
+
 bool cam_goal_fb = 1; //default : (1 : cam front)  ,  (2: cam back)
 
 int pan_f_goal = 1030;
@@ -115,6 +118,13 @@ int tilt_f_goal = 1550;
 int pan_b_goal = 3055;
 int tilt_b_goal = 1155;
 
+int pan_present_posi = 1030;  //default
+int tilt_present_posi = 1550; //default
+
+int pan_goal_position = 1030;
+int tilt_goal_position = 1550;
+
+int CAM_DELTA = 10;
 
 
 
@@ -162,6 +172,8 @@ void CAM_FB_Callback(const std_msgs::Int8::ConstPtr& msg)
           {
             packetHandler->getTxRxResult(dxl_comm_result);
           }
+          pan_present_posi = pan_f_goal;
+          tilt_present_posi = tilt_f_goal;
 
       }
       else if(msg->data == 2){  //false : cam back
@@ -175,6 +187,8 @@ void CAM_FB_Callback(const std_msgs::Int8::ConstPtr& msg)
           {
             packetHandler->getTxRxResult(dxl_comm_result);
           }
+          pan_present_posi = pan_b_goal;
+          tilt_present_posi = tilt_b_goal;
 
       }
   }
@@ -210,6 +224,45 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joymsg)
     gripper_goal_position = gripper_posi[OPEN];
     gripper_posi_go = true;
   }
+  }
+  else if(tele_onoff_g==5){ //CAM_CTRL mode
+
+      if(joymsg->axes[AXES_LEFT_UPDOWN]>0.2){
+        tilt_goal_position = tilt_present_posi - CAM_DELTA;
+        tilt_present_posi = tilt_goal_position;
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_goal_position);
+
+
+      }
+      else if(joymsg->axes[AXES_LEFT_UPDOWN]<-0.2){
+        tilt_goal_position = tilt_present_posi + CAM_DELTA;
+        tilt_present_posi = tilt_goal_position;
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_goal_position);
+      }
+      else if(joymsg->axes[AXES_RIGHT_LEFT_RIGHT]>0.2){
+        pan_goal_position = pan_present_posi + CAM_DELTA;
+        pan_present_posi = pan_goal_position;
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_goal_position);
+
+      }
+      else if(joymsg->axes[AXES_RIGHT_LEFT_RIGHT]<-0.2){
+        pan_goal_position = pan_present_posi - CAM_DELTA;
+        pan_present_posi = pan_goal_position;
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_goal_position);
+      }
+      else if(joymsg->buttons[Left_triger_button]>=0.9){
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_f_goal);
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_f_goal);
+          pan_present_posi = pan_f_goal;
+          tilt_present_posi = tilt_f_goal;
+      }
+      else if(joymsg->buttons[Right_triger_button]>=0.9){
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_b_goal);
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_b_goal);
+          pan_present_posi = pan_b_goal;
+          tilt_present_posi = tilt_b_goal;
+      }
+
   }
 
   if(joymsg->buttons[Right_triger_button]>=0.9){
