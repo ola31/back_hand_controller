@@ -7,9 +7,14 @@
 
 #define PROTOCOL_VERSION                2.0
 #define DXL_ID                          20
+
+#define DXL_ID_CAM_PAN                  31
+#define DXL_ID_CAM_TILT                 32
+
+
 #define LIDAR_DXL_ID                    1
 #define BAUDRATE                        1000000
-#define DEVICENAME                      "/dev/kudos_u2d2_B"     // "/dev/ttyUSB0"
+#define DEVICENAME                      "/dev/ttyUSB0" //"/dev/kudos_u2d2_B"     // "/dev/ttyUSB0"
 
 #define ADDR_PRO_GOAL_POSITION          116
 #define ADDR_PRO_TORQUE_ENABLE          64
@@ -29,6 +34,16 @@
 #define PI 3.1415
 #define ABS(X) ((X) < 0 ? -(X) : (X))
 #define EPSILON 0.001
+
+
+
+/*********************************************************************************************************/
+  dynamixel::PortHandler *portHandler = dynamixel::PortHandler::getPortHandler(DEVICENAME);
+  dynamixel::PacketHandler *packetHandler = dynamixel::PacketHandler::getPacketHandler(PROTOCOL_VERSION);
+  int dxl_comm_result = COMM_TX_FAIL;             // Communication result
+  uint8_t dxl_error = 0;                          // Dynamixel error
+  int32_t dxl_present_position = 0;               // Present position
+/*********************************************************************************************************/
 
 
 /********조이스틱 Axes & Butten*******/
@@ -91,6 +106,18 @@ int present_posi=0;
 int goal_posi = 0;
 int start=0;
 
+
+bool cam_goal_fb = 1; //default : (1 : cam front)  ,  (2: cam back)
+
+int pan_f_goal = 1030;
+int tilt_f_goal = 1550;
+
+int pan_b_goal = 3055;
+int tilt_b_goal = 1155;
+
+
+
+
 double acc_time_area=1.5;
 double dt = 0.01; //sec
 double t = 0.0;
@@ -102,6 +129,54 @@ void updownCallback(const std_msgs::Int8::ConstPtr& msg)
     goal_updown = msg->data;
     //is_moving = true;
     t = 0.0;
+  }
+
+}
+
+void init_cam_pose(void){
+        //true : cam front
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_f_goal);
+        if (dxl_comm_result != COMM_SUCCESS)
+        {
+          packetHandler->getTxRxResult(dxl_comm_result);
+        }
+        dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_f_goal);
+        if (dxl_comm_result != COMM_SUCCESS)
+        {
+          packetHandler->getTxRxResult(dxl_comm_result);
+        }
+
+}
+void CAM_FB_Callback(const std_msgs::Int8::ConstPtr& msg)
+{
+  if(msg->data != goal_updown){
+      goal_updown=msg->data;
+      if(msg->data == 1){  //true : cam front
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_f_goal);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_f_goal);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+
+      }
+      else if(msg->data == 2){  //false : cam back
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_GOAL_POSITION, (int)pan_b_goal);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+          dxl_comm_result = packetHandler->write4ByteTxOnly(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_GOAL_POSITION, (int)tilt_b_goal);
+          if (dxl_comm_result != COMM_SUCCESS)
+          {
+            packetHandler->getTxRxResult(dxl_comm_result);
+          }
+
+      }
   }
 
 }
@@ -170,12 +245,13 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "back_hand_controller_node");
   ros::NodeHandle nh;
-
+/*  declare at global
   dynamixel::PortHandler *portHandler = dynamixel::PortHandler::getPortHandler(DEVICENAME);
   dynamixel::PacketHandler *packetHandler = dynamixel::PacketHandler::getPacketHandler(PROTOCOL_VERSION);
   int dxl_comm_result = COMM_TX_FAIL;             // Communication result
   uint8_t dxl_error = 0;                          // Dynamixel error
   int32_t dxl_present_position = 0;               // Present position
+*/
 
   // Open port
   if (portHandler->openPort()){
@@ -271,6 +347,32 @@ int main(int argc, char **argv)
    else{
      ROS_INFO("Dynamixel has been successfully connected");
    }
+//cam pan tilt torque on
+   dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, DXL_ID_CAM_PAN, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+   if (dxl_comm_result != COMM_SUCCESS) {
+     packetHandler->getTxRxResult(dxl_comm_result);
+   }
+   else if (dxl_error != 0){
+     packetHandler->getRxPacketError(dxl_error);
+   }
+   else{
+     ROS_INFO("Dynamixel has been successfully connected");
+   }
+
+   dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, DXL_ID_CAM_TILT, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+   if (dxl_comm_result != COMM_SUCCESS) {
+     packetHandler->getTxRxResult(dxl_comm_result);
+   }
+   else if (dxl_error != 0){
+     packetHandler->getRxPacketError(dxl_error);
+   }
+   else{
+     ROS_INFO("Dynamixel has been successfully connected");
+   }
+
+
+
+
 
 
    dxl_comm_result = packetHandler->write2ByteTxRx(portHandler, DXL_ID, ADDR_PRO_GOAL_CURRENT, 300, &dxl_error);
@@ -304,10 +406,13 @@ int main(int argc, char **argv)
    present_posi = dxl_present_position;
    start = present_posi;
 
+   init_cam_pose();
+
 
   ros::Subscriber sub = nh.subscribe("/joy", 1, JoyCallback);
   ros::Subscriber tele_onoff_sub = nh.subscribe("/teleop_onoff", 10, teleOnoffCallback);
-  ros::Subscriber sub_lidar = nh.subscribe("/lidar_updown", 1000, updownCallback);
+  ros::Subscriber sub_lidar = nh.subscribe("/lidar_updown", 10, updownCallback);
+  ros::Subscriber sub_cam = nh.subscribe("/CAM_posi", 10, CAM_FB_Callback);
 
 
 
@@ -335,6 +440,7 @@ int main(int argc, char **argv)
     }
 
     std_msgs::Int32 msg_;
+
 
     if(operating_mode == TORQUE_OFF){
     if(t < acc_time_area){
